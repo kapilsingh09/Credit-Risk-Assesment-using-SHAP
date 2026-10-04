@@ -5,14 +5,17 @@ import joblib
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+import os
 
-#life span
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# print(BASE_DIR)
+# life span
 
 ml_model={}
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    ml_model['model'] = joblib.load('credit_risk_model.pkl')
-    ml_model['threshold'] = joblib.load('best_threshold.pkl')
+    ml_model['model'] = joblib.load(os.path.join(BASE_DIR, 'credit_risk_model.pkl'))
+    ml_model['threshold'] = joblib.load(os.path.join(BASE_DIR, 'best_threshold.pkl'))
 
     yield
 
@@ -44,26 +47,29 @@ class LoanApplication(BaseModel): #Pydantic Model (Validation)
 
 
 
-@app.get("/")
-def Home():
-    return {"message": "Hello, World!"}
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
 
 @app.post('/predict')
 def predict(data : LoanApplication):
     input_df = pd.DataFrame([data.model_dump()])
 
-    probability = ml_model['model'].predict_proba(input_df)[:, 1][0]
+    probability = float(ml_model['model'].predict_proba(input_df)[:, 1][0])
+    threshold = float(ml_model["threshold"])
 
-    prediction = int(probability >= ml_model["threshold"])
+    prediction = int(probability >= threshold)
 
     return {
         "default_probability": probability,
         "default_prediction": prediction,
-        "threshold": ml_model["threshold"],
+        "threshold": threshold,
         "Result": "High Risk" if prediction == 1 else "Low Risk"
     }
 
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+app.mount("/", StaticFiles(directory=os.path.join(BASE_DIR, "static"), html=True), name="static")
+
 
 if __name__ == "__main__":
     import uvicorn
