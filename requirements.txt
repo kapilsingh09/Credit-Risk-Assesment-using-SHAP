@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pydantic
+pandas
+joblib
+scikit-learn
+fastapi
+uvicorn
+pydantic
+pandas
+joblib
+scikit-learn
+xgboost
